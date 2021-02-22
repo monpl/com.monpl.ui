@@ -7,7 +7,7 @@
   "dependencies": {
     "com.monpl.utils": "1.0.0",
     "com.monpl.pattenrs": "1.0.0",
-    "com.monpl.dotween": "1.0.0",
+    "com.monpl.dotween": "1.0.0"
   },
   "keywords": [
     "unity",
