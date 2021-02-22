@@ -1,0 +1,28 @@
+{
+  "name": "com.monpl.ui",
+  "displayName": "Monsterplanet's UI Collections",
+  "version": "1.0.0",
+  "unity": "2019.3",
+  "description": "Managing UI Objects",
+  "dependencies": {
+    "com.monpl.utils": "1.0.0",
+    "com.monpl.pattenrs": "1.0.0",
+    "com.monpl.dotween": "1.0.0",
+  },
+  "keywords": [
+    "unity",
+    "ui",
+    "monpl"
+  ],
+  "license": "MIT",
+  "author": {
+    "name": "MonsterPlanet",
+    "email": "kyc521@monsterplanet.co.kr",
+    "url": "https://monsterplanet.co.kr"
+  },
+  "homepage": "https://monsterplanet.co.kr",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:monpl/com.monpl.ui.git"
+  }
+}
