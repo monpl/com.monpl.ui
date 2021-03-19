@@ -11,6 +11,7 @@ namespace Monpl.UI
 {
     public class PopupManagerSettings
     {
+        public string[] popupNames;
         public bool isOnlyOnePopup;
         public float dimmingTime = 0.1f;
         public bool isPortrait;
@@ -33,7 +34,7 @@ namespace Monpl.UI
 
     public class PopupManager : MonoSingleton<PopupManager>
     {
-        private RectTransform[] _popupRoots;
+        private RectTransform _popupRoot;
         private PopupManagerSettings _settings;
 
         public Dictionary<string, PopupBase> PopupDic { get; private set; }
@@ -44,9 +45,9 @@ namespace Monpl.UI
         private Queue<PopupActionData> _popupActions;
         private Action<List<string>> _popupChangedAction;
 
-        public void PreInit(RectTransform[] popupRoots, PopupManagerSettings settings)
+        public void PreInit(RectTransform popupRoot, string popupResRoot, PopupManagerSettings settings)
         {
-            _popupRoots = popupRoots;
+            this._popupRoot = popupRoot;
             _settings = settings;
 
             PopupDic = new Dictionary<string, PopupBase>();
@@ -55,30 +56,32 @@ namespace Monpl.UI
             _popupActions = new Queue<PopupActionData>();
             _popupChangedAction = settings.onChangedPopupList;
 
-            FindChildPopups();
+            FindPopups(popupResRoot);
 
             StopAllCoroutines();
             StartCoroutine(PopupRoutine());
         }
 
-        private void FindChildPopups()
+        private void FindPopups(string popupResRoot)
         {
-            foreach (var popupRoot in _popupRoots)
+            if (_settings.popupNames == null)
+                return;
+
+            foreach (var popupName in _settings.popupNames)
             {
-                for (var i = 0; i < popupRoot.childCount; ++i)
-                {
-                    var child = popupRoot.GetChild(i).GetComponent<PopupBase>();
-                    if (child != null)
-                    {
-                        PopupDic.Add(child.name, child);
+                var popup = Resources.Load<PopupBase>($"{popupResRoot}/{popupName}");
 
-                        child.gameObject.SetActive(true);
-                        child.PreInit(popupRoot, _settings.dimmingTime);
-                    }
-                }
+                if (popup == null)
+                    continue;
 
-                popupRoot.GetComponent<CanvasScaler>().matchWidthOrHeight = DeviceUtil.GetScaleMatch();
+                var newPopup = Instantiate(popup, _popupRoot, false);
+                newPopup.gameObject.SetActive(true);
+                newPopup.PreInit(_popupRoot, _settings.dimmingTime);
+
+                PopupDic.Add(popup.name, newPopup);
             }
+
+            _popupRoot.GetComponent<CanvasScaler>().matchWidthOrHeight = DeviceUtil.GetScaleMatch();
         }
 
         public void AddWaitingPopupQueue(string waitPopupName, float delay = 0.0f)
@@ -128,7 +131,6 @@ namespace Monpl.UI
 
         private void AddPopupAction(PopupAction actionType, string popupName, float delay = 0.0f)
         {
-            Debug.Log("_popupActions: " + _popupActions);
             _popupActions.Enqueue(new PopupActionData
             {
                 actionType = actionType,
