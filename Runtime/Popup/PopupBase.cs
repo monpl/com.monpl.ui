@@ -281,11 +281,11 @@ namespace Monpl.UI
                 _dimmingImg.enabled = true;
 
             _dimmingImg.DOKill();
-            _dimmingImg.DOFade(enable ? 0.5f : 0f, time).SetEase(Ease.Linear).OnComplete(() =>
-            {
-                if (enable == false)
-                    _dimmingImg.enabled = false;
-            });
+            // _dimmingImg.DOFade(enable ? 0.5f : 0f, time).SetEase(Ease.Linear).OnComplete(() =>
+            // {
+            //     if (enable == false)
+            //         _dimmingImg.enabled = false;
+            // });
         }
         
         public virtual void HideWill()
@@ -300,7 +300,7 @@ namespace Monpl.UI
         
         public virtual void OnPressedBackKey()
         {
-            PopupManager.Instance.PopHidePopup();
+            // PopupManager.Instance.PopHidePopup();
         }
     }
 }

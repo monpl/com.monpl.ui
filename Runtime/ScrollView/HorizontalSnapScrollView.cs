@@ -198,7 +198,7 @@ namespace Monpl.UI
             _contentStartVec = contentRoot.anchoredPosition;
             _contentEndVec = new Vector2(_contentMaxX * _currVal * -1, _contentStartVec.y);
 
-            contentRoot.DOAnchorPosX(_contentEndVec.x, snappingTime).SetEase(Ease.InOutQuad);
+            // contentRoot.DOAnchorPosX(_contentEndVec.x, snappingTime).SetEase(Ease.InOutQuad);
         }
 
         private void StopLerping()

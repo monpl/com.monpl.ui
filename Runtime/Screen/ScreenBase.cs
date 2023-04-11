@@ -1,4 +1,5 @@
-using System.Collections;
+using System;
+using Cysharp.Threading.Tasks;
 using Monpl.Utils;
 using UnityEngine;
 using UnityEngine.UI;
@@ -15,8 +16,6 @@ namespace Monpl.UI
             SetActiveCanvasGroup(false);
         }
 
-        public virtual void SetGoodsArea() { }
-
         public virtual void ShowWill() { }
 
         public virtual void ShowDone() { }
@@ -25,16 +24,16 @@ namespace Monpl.UI
 
         public virtual void DismissDone() { }
 
-        public virtual IEnumerator ShowRoutine(float fadingTime = 0.1f)
+        public virtual async UniTask ShowRoutine(float fadingTime = 0.1f)
         {
             SetActiveCanvasGroup(true, fadingTime);
-            yield return new WaitForSeconds(fadingTime);
+            await UniTask.Delay(TimeSpan.FromSeconds(fadingTime));
         }
 
-        public virtual IEnumerator DismissRoutine(float fadingTime = 0.1f)
+        public virtual async UniTask DismissRoutine(float fadingTime = 0.1f)
         {
             SetActiveCanvasGroup(false, fadingTime);
-            yield return new WaitForSeconds(fadingTime);
+            await UniTask.Delay(TimeSpan.FromSeconds(fadingTime));
         }
 
         public virtual void OnPressedBackKey() { }

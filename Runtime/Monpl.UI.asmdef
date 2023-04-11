@@ -3,8 +3,8 @@
     "rootNamespace": "",
     "references": [
         "Monpl.Utils",
-        "Monpl.Patterns",
-        "DOTween.Modules"
+        "DOTween.Modules",
+        "UniTask"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

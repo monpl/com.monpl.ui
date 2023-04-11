@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using Monpl.Patterns;
 using Monpl.Utils;
 using Monpl.Utils.Extensions;
 using UnityEngine;
@@ -32,7 +31,7 @@ namespace Monpl.UI
         PopHide,
     }
 
-    public class PopupManager : MonoSingleton<PopupManager>
+    public class PopupContainer : MonoBehaviour
     {
         private RectTransform _popupRoot;
         private PopupManagerSettings _settings;
@@ -45,18 +44,18 @@ namespace Monpl.UI
         private Queue<PopupActionData> _popupActions;
         private Action<List<string>> _popupChangedAction;
 
-        public void PreInit(RectTransform popupRoot, string popupResRoot, PopupManagerSettings settings)
+        public void PreInit()
         {
-            this._popupRoot = popupRoot;
-            _settings = settings;
+            // _popupRoot = popupRoot;
+            // _settings = settings;
 
             PopupDic = new Dictionary<string, PopupBase>();
             showingPopupList = new List<string>();
             waitingPopupQueue = new Queue<PopupActionData>();
             _popupActions = new Queue<PopupActionData>();
-            _popupChangedAction = settings.onChangedPopupList;
+            // _popupChangedAction = settings.onChangedPopupList;
 
-            FindPopups(popupResRoot);
+            // FindPopups(popupResRoot);
 
             StopAllCoroutines();
             StartCoroutine(PopupRoutine());
