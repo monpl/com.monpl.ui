@@ -1,3 +1,4 @@
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 namespace Monpl.UI
@@ -18,37 +19,22 @@ namespace Monpl.UI
             }
         }
 
-        private ScreenContainer _screenContainer;
-        private PopupContainer _popupContainer;
+        public static ScreenContainer ScreenContainer { get; private set; }
+        public static PopupContainer PopupContainer { get; private set; }
 
         /// <summary>
         /// Scene에서 UIManager를 초기화 해준다.
         /// </summary>
-        public void InitOnScene(string initScreenName)
+        public async UniTask InitOnScene(string initScreenName)
         {
             if (!FindContainers())
                 return;
 
-            _screenContainer.PreInit();
-            _popupContainer.PreInit();
+            ScreenContainer.PreInit();
+            await PopupContainer.PreInit();
 
-            ChangeScreen(initScreenName);
-        }
-
-        /// <summary>
-        /// 스크린을 변경
-        /// </summary>
-        public void ChangeScreen(string screenName)
-        {
-            _screenContainer.ChangeScreen(screenName);
-        }
-
-        /// <summary>
-        /// 팝업을 띄운다
-        /// </summary>
-        public void ShowPopup(string popupName)
-        {
-            _popupContainer.ShowPopup(popupName);
+            ScreenContainer.ChangeScreen(initScreenName);
+            
         }
 
         private static UIManager CreateManager()
@@ -61,10 +47,10 @@ namespace Monpl.UI
 
         private bool FindContainers()
         {
-            _screenContainer = FindObjectOfType<ScreenContainer>();
-            _popupContainer = FindObjectOfType<PopupContainer>();
+            ScreenContainer = FindObjectOfType<ScreenContainer>();
+            PopupContainer = FindObjectOfType<PopupContainer>();
 
-            if (_screenContainer != null && _popupContainer != null)
+            if (ScreenContainer != null && PopupContainer != null)
                 return true;
 
             Debug.LogError("UImanager Init fail..");

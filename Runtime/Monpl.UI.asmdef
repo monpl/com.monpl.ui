@@ -4,7 +4,11 @@
     "references": [
         "Monpl.Utils",
         "DOTween.Modules",
-        "UniTask"
+        "UniTask",
+        "UniTask.Addressables",
+        "UniTask.DOTween",
+        "Unity.Addressables",
+        "Unity.ResourceManager"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

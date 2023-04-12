@@ -4,12 +4,6 @@ using UnityEngine;
 
 namespace Monpl.UI
 {
-    public class ScreenManagerSettings
-    {
-        public float defaultChangeTime;
-        public bool changeScreenBoth;
-    }
-
     public class ScreenContainer : MonoBehaviour
     {
         private Dictionary<string, ScreenBase> _screenDictionary;
@@ -17,6 +11,8 @@ namespace Monpl.UI
 
         public string CurScreenType { get; private set; }
         public bool IsTransitioning { get; private set; }
+
+        public ScreenBase GetCurScreen() => _screenDictionary[CurScreenType];
 
         public void PreInit()
         {
@@ -47,8 +43,11 @@ namespace Monpl.UI
             }
         }
 
-        public void ChangeScreen(string newScreenType)
+        public void ChangeScreen(string newScreenType, bool ignoreTransitionCheck = false)
         {
+            if (IsTransitioning && !ignoreTransitionCheck)
+                return;
+
             _screenWaitingQueue.Enqueue(newScreenType);
         }
 
@@ -61,18 +60,15 @@ namespace Monpl.UI
                 if (_screenWaitingQueue.Count == 0)
                     continue;
 
-                var newScreenType = _screenWaitingQueue.Dequeue();
+                var newScreenName = _screenWaitingQueue.Dequeue();
 
-                if (string.IsNullOrEmpty(newScreenType) || !_screenDictionary.ContainsKey(newScreenType))
+                if (string.IsNullOrEmpty(newScreenName) || !_screenDictionary.ContainsKey(newScreenName))
                     continue;
 
-                if (IsTransitioning)
-                    continue;
-
-                if (newScreenType == CurScreenType || string.IsNullOrEmpty(CurScreenType))
-                    await ShowFirstScreenRoutine(newScreenType);
+                if (newScreenName == CurScreenType || string.IsNullOrEmpty(CurScreenType))
+                    await ShowFirstScreenRoutine(newScreenName);
                 else
-                    await ChangeScreenRoutine(newScreenType);
+                    await ChangeScreenRoutine(newScreenName);
 
                 await UniTask.Yield();
             }
@@ -107,17 +103,12 @@ namespace Monpl.UI
 
             curScreen.DismissWill();
 
-            await UniTask.WhenAll(curScreen.DismissRoutine(1f), newScreen.ShowRoutine(1f));
+            await UniTask.WhenAll(curScreen.DismissRoutine(), newScreen.ShowRoutine());
 
             IsTransitioning = false;
 
             curScreen.DismissDone();
             newScreen.ShowDone();
-        }
-
-        public ScreenBase GetCurScreen()
-        {
-            return _screenDictionary[CurScreenType];
         }
     }
 }

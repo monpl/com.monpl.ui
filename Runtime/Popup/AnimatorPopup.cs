@@ -1,4 +1,5 @@
 using System.Collections;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 namespace Monpl.UI
@@ -13,9 +14,9 @@ namespace Monpl.UI
 
         protected Animator popupAnimator;
 
-        public override void PreInit(RectTransform popupCanvasTrs, float dimmingTime)
+        public override void PreInit(RectTransform popupCanvasTrs)
         {
-            base.PreInit(popupCanvasTrs, dimmingTime);
+            base.PreInit(popupCanvasTrs);
             popupAnimator = GetComponent<Animator>();
         }
 
@@ -46,10 +47,10 @@ namespace Monpl.UI
             IsShown = true;
         }
 
-        public override IEnumerator HidePopup(bool isTemporaryHide = false)
+        public override async UniTask HidePopup(bool isTemporaryHide = false)
         {
             popupAnimator.enabled = false;
-            yield return base.HidePopup(isTemporaryHide);
+            await base.HidePopup(isTemporaryHide);
         }
     }
 }

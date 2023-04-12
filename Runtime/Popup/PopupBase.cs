@@ -1,4 +1,5 @@
 using System.Collections;
+using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using Monpl.Utils.Extensions;
 using UnityEngine;
@@ -6,42 +7,21 @@ using UnityEngine.UI;
 
 namespace Monpl.UI
 {
-    public enum PopupShowTransitionType
-    {
-        None,
-        ScaleUp,
-        Up,
-        Down,
-        Left,
-        Right,
-        Custom,
-    }
-    public enum PopupHideTransitionType
-    {
-        None,
-        ScaleDown,
-        Up,
-        Down,
-        Left,
-        Right,
-        Custom,
-    }
-    
     public class PopupBase : MonoBehaviour
     {
-        [SerializeField] private PopupShowTransitionType popupShowType; 
-        [SerializeField] private PopupHideTransitionType popupHideType;
-        [SerializeField] private Ease showEase = Ease.Linear;
-        [SerializeField] private Ease hideEase = Ease.Linear;
-        [SerializeField] private float startPopupAlpha = 0.5f;
-        [SerializeField] private float showingTime = 0.3f;
-        [SerializeField] private float hidingTime = 0.3f;
+        [SerializeField] private PopupTransitionData showTransition; 
+        [SerializeField] private PopupTransitionData hideTransition;
+        // [SerializeField] private Ease showEase = Ease.Linear;
+        // [SerializeField] private Ease hideEase = Ease.Linear;
+        // [SerializeField] private float startPopupAlpha = 0.5f;
+        // [SerializeField] private float showingTime = 0.3f;
+        // [SerializeField] private float hidingTime = 0.3f;
         [SerializeField] private bool dimmingHave = true;
 
         protected CanvasRootObject _popupRoot;
         protected Transform _popupTrs;
         protected Vector2 _oriLocalPos;
-        
+
         private Image _dimmingImg;
 
         private RectTransform _popupCanvasTrs;
@@ -50,7 +30,7 @@ namespace Monpl.UI
         
         public bool IsShown { get; protected set; }
 
-        public virtual void PreInit(RectTransform popupCanvasTrs, float dimmingTime)
+        public virtual void PreInit(RectTransform popupCanvasTrs)
         {
             if (PreInitChildPopup() == false)
                 return;
@@ -63,7 +43,7 @@ namespace Monpl.UI
 
             _popupCanvasTrs = popupCanvasTrs;
             _popupRoot.SetActiveCanvasGroup(false);
-            _dimmingTime = dimmingTime; 
+            // _dimmingTime = dimmingTime; 
             IsShown = false;
             
             Invoke(nameof(GetScreenSize), 0.05f);
@@ -120,9 +100,10 @@ namespace Monpl.UI
             _screenSize = _popupCanvasTrs.sizeDelta;
         }
 
-        public virtual IEnumerator ShowPopup(bool isReOpen = false)
+        public virtual async UniTask ShowPopup(bool isReOpen = false)
         {
             transform.SetAsLastSibling();
+            
             _popupTrs.DOKill();
             _popupTrs.Reset();
             _popupTrs.localPosition = _oriLocalPos;
@@ -130,75 +111,77 @@ namespace Monpl.UI
             if (dimmingHave)
                 _dimmingImg.enabled = true;
 
-            switch (popupShowType)
-            {
-                case PopupShowTransitionType.ScaleUp:
-                    _popupTrs.localScale = new Vector3(0.5f, 0.5f);
-                    _popupRoot.SetAlpha(startPopupAlpha);
-                    _popupRoot.SetActiveCanvasGroup(true, showingTime);
+            await showTransition.Play(transform);
 
-                    if (isReOpen)
-                        _popupTrs.DOScale(1f, showingTime).SetEase(showEase);
-                    else
-                        yield return _popupTrs.DOScale(1f, showingTime).SetEase(showEase).WaitForCompletion();
-                    break;
-
-                case PopupShowTransitionType.Up:
-                    _popupTrs.localPosition = new Vector3(0, -_screenSize.y, 0);
-                    _popupRoot.SetAlpha(startPopupAlpha);
-                    _popupRoot.SetActiveCanvasGroup(true, showingTime);
-
-                    if (isReOpen)
-                        _popupTrs.DOLocalMoveY(0f, showingTime).SetEase(showEase);
-                    else
-                        yield return _popupTrs.DOLocalMoveY(0f, showingTime).SetEase(showEase).WaitForCompletion();
-                    break;
-
-                case PopupShowTransitionType.Down:
-                    _popupTrs.localPosition = new Vector3(0, _screenSize.y, 0);
-                    _popupRoot.SetAlpha(startPopupAlpha);
-                    _popupRoot.SetActiveCanvasGroup(true, showingTime);
-
-                    if (isReOpen)
-                        _popupTrs.DOLocalMoveY(0f, showingTime).SetEase(showEase);
-                    else
-                        yield return _popupTrs.DOLocalMoveY(0f, showingTime).SetEase(showEase).WaitForCompletion();
-                    break;
-
-                case PopupShowTransitionType.Left:
-                    _popupTrs.localPosition = new Vector3(-_screenSize.x, 0, 0);
-                    _popupRoot.SetAlpha(startPopupAlpha);
-                    _popupRoot.SetActiveCanvasGroup(true, showingTime);
-
-                    if (isReOpen)
-                        _popupTrs.DOLocalMoveX(0f, showingTime).SetEase(showEase);
-                    else
-                        yield return _popupTrs.DOLocalMoveX(0f, showingTime).SetEase(showEase).WaitForCompletion();
-                    break;
-
-                case PopupShowTransitionType.Right:
-                    _popupTrs.localPosition = new Vector3(_screenSize.x, 0, 0);
-                    _popupRoot.SetAlpha(startPopupAlpha);
-                    _popupRoot.SetActiveCanvasGroup(true, showingTime);
-
-                    if (isReOpen)
-                        _popupTrs.DOLocalMoveX(0f, showingTime).SetEase(showEase);
-                    else
-                        yield return _popupTrs.DOLocalMoveX(0f, showingTime).SetEase(showEase).WaitForCompletion();
-                    break;
-                case PopupShowTransitionType.Custom:
-                    if (isReOpen)
-                        ShowPopupCustom();
-                    else
-                        yield return ShowPopupCustom();
-                    break;
-                default:
-                    _popupRoot.SetActiveCanvasGroup(true, showingTime);
-                    
-                    if(isReOpen)
-                        yield return new WaitForSeconds(showingTime);
-                    break;
-            }
+            // switch (popupShowType)
+            // {
+            //     case PopupShowTransitionType.ScaleUp:
+            //         _popupTrs.localScale = new Vector3(0.5f, 0.5f);
+            //         _popupRoot.SetAlpha(startPopupAlpha);
+            //         _popupRoot.SetActiveCanvasGroup(true, showingTime);
+            //
+            //         if (isReOpen)
+            //             _popupTrs.DOScale(1f, showingTime).SetEase(showEase).ToUniTask();
+            //         else
+            //             await _popupTrs.DOScale(1f, showingTime).SetEase(showEase).ToUniTask();
+            //         break;
+            //
+            //     case PopupShowTransitionType.Up:
+            //         _popupTrs.localPosition = new Vector3(0, -_screenSize.y, 0);
+            //         _popupRoot.SetAlpha(startPopupAlpha);
+            //         _popupRoot.SetActiveCanvasGroup(true, showingTime);
+            //
+            //         if (isReOpen)
+            //             _popupTrs.DOLocalMoveY(0f, showingTime).SetEase(showEase);
+            //         else
+            //             await _popupTrs.DOLocalMoveY(0f, showingTime).SetEase(showEase).ToUniTask();
+            //         break;
+            //
+            //     case PopupShowTransitionType.Down:
+            //         _popupTrs.localPosition = new Vector3(0, _screenSize.y, 0);
+            //         _popupRoot.SetAlpha(startPopupAlpha);
+            //         _popupRoot.SetActiveCanvasGroup(true, showingTime);
+            //
+            //         if (isReOpen)
+            //             _popupTrs.DOLocalMoveY(0f, showingTime).SetEase(showEase);
+            //         else
+            //             await _popupTrs.DOLocalMoveY(0f, showingTime).SetEase(showEase).ToUniTask();
+            //         break;
+            //
+            //     case PopupShowTransitionType.Left:
+            //         _popupTrs.localPosition = new Vector3(-_screenSize.x, 0, 0);
+            //         _popupRoot.SetAlpha(startPopupAlpha);
+            //         _popupRoot.SetActiveCanvasGroup(true, showingTime);
+            //
+            //         if (isReOpen)
+            //             _popupTrs.DOLocalMoveX(0f, showingTime).SetEase(showEase);
+            //         else
+            //             await _popupTrs.DOLocalMoveX(0f, showingTime).SetEase(showEase).ToUniTask();
+            //         break;
+            //
+            //     case PopupShowTransitionType.Right:
+            //         _popupTrs.localPosition = new Vector3(_screenSize.x, 0, 0);
+            //         _popupRoot.SetAlpha(startPopupAlpha);
+            //         _popupRoot.SetActiveCanvasGroup(true, showingTime);
+            //
+            //         if (isReOpen)
+            //             _popupTrs.DOLocalMoveX(0f, showingTime).SetEase(showEase);
+            //         else
+            //             await _popupTrs.DOLocalMoveX(0f, showingTime).SetEase(showEase).ToUniTask();
+            //         break;
+            //     case PopupShowTransitionType.Custom:
+            //         if (isReOpen)
+            //             ShowPopupCustom();
+            //         else
+            //             await ShowPopupCustom();
+            //         break;
+            //     default:
+            //         _popupRoot.SetActiveCanvasGroup(true, showingTime);
+            //         
+            //         // if(isReOpen)
+            //         //     yield return new WaitForSeconds(showingTime);
+            //         break;
+            // }
 
             if(isReOpen == false)
                 ShowDone();
@@ -209,14 +192,14 @@ namespace Monpl.UI
             }
         }
 
-        protected virtual YieldInstruction ShowPopupCustom()
+        protected virtual UniTask ShowPopupCustom()
         {
-            return (YieldInstruction) null;
+            return UniTask.Yield().ToUniTask();
         }
         
-        protected virtual YieldInstruction HidePopupCustom()
+        protected virtual UniTask HidePopupCustom()
         {
-            return (YieldInstruction) null;
+            return UniTask.Yield().ToUniTask();
         }
 
         public virtual void SetGoodsArea()
@@ -234,43 +217,44 @@ namespace Monpl.UI
             IsShown = true;
         }
 
-        public virtual IEnumerator HidePopup(bool isTemporaryHide = false)
+        public virtual async UniTask HidePopup(bool isTemporaryHide = false)
         {
             _popupTrs.DOKill();
 
             if (dimmingHave)
                 _dimmingImg.enabled = false;
 
-            _popupRoot.SetActiveCanvasGroup(false, hidingTime);
-            
+            // _popupRoot.SetActiveCanvasGroup(false, hidingTime);
+
+            await hideTransition.Play(transform);
             IsShown = false;
-            if (isTemporaryHide == false)
-            {
-                switch (popupHideType)
-                {
-                    case PopupHideTransitionType.ScaleDown:
-                        yield return _popupTrs.DOScale(0, hidingTime).SetEase(hideEase).WaitForCompletion();
-                        break;
-                    case PopupHideTransitionType.Up:
-                        yield return _popupTrs.DOLocalMoveY(_screenSize.y, hidingTime).SetEase(hideEase).WaitForCompletion();
-                        break;
-                    case PopupHideTransitionType.Down:
-                        yield return _popupTrs.DOLocalMoveY(-_screenSize.y, hidingTime).SetEase(hideEase).WaitForCompletion();
-                        break;
-                    case PopupHideTransitionType.Left:
-                        yield return _popupTrs.DOLocalMoveX(-_screenSize.x, hidingTime).SetEase(hideEase).WaitForCompletion();
-                        break;
-                    case PopupHideTransitionType.Right:
-                        yield return _popupTrs.DOLocalMoveX(_screenSize.x, hidingTime).SetEase(hideEase).WaitForCompletion();
-                        break;
-                    case PopupHideTransitionType.Custom:
-                        yield return HidePopupCustom();
-                        break;
-                    default:
-                        yield return new WaitForSeconds(hidingTime);
-                        break;
-                }
-            }
+            // if (isTemporaryHide == false)
+            // {
+            //     switch (popupHideType)
+            //     {
+            //         case PopupHideTransitionType.ScaleDown:
+            //             yield return _popupTrs.DOScale(0, hidingTime).SetEase(hideEase).WaitForCompletion();
+            //             break;
+            //         case PopupHideTransitionType.Up:
+            //             yield return _popupTrs.DOLocalMoveY(_screenSize.y, hidingTime).SetEase(hideEase).WaitForCompletion();
+            //             break;
+            //         case PopupHideTransitionType.Down:
+            //             yield return _popupTrs.DOLocalMoveY(-_screenSize.y, hidingTime).SetEase(hideEase).WaitForCompletion();
+            //             break;
+            //         case PopupHideTransitionType.Left:
+            //             yield return _popupTrs.DOLocalMoveX(-_screenSize.x, hidingTime).SetEase(hideEase).WaitForCompletion();
+            //             break;
+            //         case PopupHideTransitionType.Right:
+            //             yield return _popupTrs.DOLocalMoveX(_screenSize.x, hidingTime).SetEase(hideEase).WaitForCompletion();
+            //             break;
+            //         case PopupHideTransitionType.Custom:
+            //             yield return HidePopupCustom();
+            //             break;
+            //         default:
+            //             yield return new WaitForSeconds(hidingTime);
+            //             break;
+            //     }
+            // }
 
             HideDone();
         }
@@ -281,11 +265,11 @@ namespace Monpl.UI
                 _dimmingImg.enabled = true;
 
             _dimmingImg.DOKill();
-            // _dimmingImg.DOFade(enable ? 0.5f : 0f, time).SetEase(Ease.Linear).OnComplete(() =>
-            // {
-            //     if (enable == false)
-            //         _dimmingImg.enabled = false;
-            // });
+            _dimmingImg.DOFade(enable ? 0.5f : 0f, time).SetEase(Ease.Linear).OnComplete(() =>
+            {
+                if (enable == false)
+                    _dimmingImg.enabled = false;
+            });
         }
         
         public virtual void HideWill()

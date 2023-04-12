@@ -1,9 +1,11 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using Monpl.Utils;
 using Monpl.Utils.Extensions;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 using UnityEngine.UI;
 
 namespace Monpl.UI
@@ -40,47 +42,43 @@ namespace Monpl.UI
         public List<string> showingPopupList { get; private set; }
         public Queue<PopupActionData> waitingPopupQueue { get; private set; }
 
-        // Action을 받으면 코루틴을 돌려 큐로 돌리기로!
         private Queue<PopupActionData> _popupActions;
-        private Action<List<string>> _popupChangedAction;
+        // private Action<List<string>> _popupChangedAction;
 
-        public void PreInit()
+        public async UniTask PreInit()
         {
-            // _popupRoot = popupRoot;
-            // _settings = settings;
-
             PopupDic = new Dictionary<string, PopupBase>();
             showingPopupList = new List<string>();
             waitingPopupQueue = new Queue<PopupActionData>();
             _popupActions = new Queue<PopupActionData>();
             // _popupChangedAction = settings.onChangedPopupList;
+            _popupRoot = GetComponent<RectTransform>();
 
-            // FindPopups(popupResRoot);
-
-            StopAllCoroutines();
-            StartCoroutine(PopupRoutine());
+            await LoadPopups();
+            PopupRoutine().Forget();
         }
 
-        private void FindPopups(string popupResRoot)
+        private async UniTask LoadPopups()
         {
-            if (_settings.popupNames == null)
-                return;
+            // if (_settings.popupNames == null)
+            //     return;
+            
+            _popupRoot.GetComponent<CanvasScaler>().matchWidthOrHeight = DeviceUtil.GetScaleMatch();
 
-            foreach (var popupName in _settings.popupNames)
+            await Addressables.LoadAssetsAsync<GameObject>("popup", popup =>
             {
-                var popup = Resources.Load<PopupBase>($"{popupResRoot}/{popupName}");
-
                 if (popup == null)
-                    continue;
+                    return;
 
-                var newPopup = Instantiate(popup, _popupRoot, false);
+                Debug.Log($"POPUP LOAD!!: {popup.name}");
+
+                var newPopupObject = Instantiate(popup, _popupRoot, false);
+                var newPopup = newPopupObject.GetComponent<PopupBase>();
                 newPopup.gameObject.SetActive(true);
-                newPopup.PreInit(_popupRoot, _settings.dimmingTime);
+                newPopup.PreInit(_popupRoot);
 
                 PopupDic.Add(popup.name, newPopup);
-            }
-
-            _popupRoot.GetComponent<CanvasScaler>().matchWidthOrHeight = DeviceUtil.GetScaleMatch();
+            }).ToUniTask();
         }
 
         public void AddWaitingPopupQueue(string waitPopupName, float delay = 0.0f)
@@ -93,7 +91,7 @@ namespace Monpl.UI
         {
             var popupName = typeof(T).Name;
             AddWaitingPopupQueue(popupName, delay);
-            return (T) PopupDic[popupName];
+            return (T)PopupDic[popupName];
         }
 
         private void PopWaitingQueue()
@@ -113,7 +111,7 @@ namespace Monpl.UI
         public T ShowPopup<T>(float delay = 0.0f) where T : PopupBase
         {
             var popupName = typeof(T).Name;
-            
+
             ShowPopup(popupName, delay);
             return (T)PopupDic[popupName];
         }
@@ -138,7 +136,7 @@ namespace Monpl.UI
             });
         }
 
-        private IEnumerator PopupRoutine()
+        private async UniTask PopupRoutine()
         {
             while (true)
             {
@@ -147,14 +145,14 @@ namespace Monpl.UI
                     if (showingPopupList.Count == 0 && waitingPopupQueue.Count > 0)
                         PopWaitingQueue();
 
-                    yield return null;
+                    await UniTask.Yield();
                     continue;
                 }
 
                 var action = _popupActions.Dequeue();
                 var popupName = action.popupName;
 
-                yield return new WaitForSeconds(action.delay);
+                await UniTask.Delay(TimeSpan.FromSeconds(action.delay));
 
                 switch (action.actionType)
                 {
@@ -166,7 +164,7 @@ namespace Monpl.UI
                             break;
                         }
 
-                        yield return ShowPopupRoutine(popupName);
+                        await ShowPopupRoutine(popupName);
                         AddPopupListInList(popupName);
                         break;
                     case PopupAction.Hide:
@@ -177,39 +175,39 @@ namespace Monpl.UI
                         }
 
                         RemovePopupInList(popupName);
-                        yield return HidePopupRoutine(popupName);
+                        await HidePopupRoutine(popupName);
                         break;
                     case PopupAction.PopHide:
                         if (showingPopupList.Count == 0)
                             break;
 
                         var lastPopupName = RemoveLastPopupInList();
-                        yield return HidePopupRoutine(lastPopupName);
+                        await HidePopupRoutine(lastPopupName);
                         break;
                     default:
                         break;
                 }
 
-                yield return null;
+                await UniTask.Yield();
             }
         }
 
-        private IEnumerator ShowPopupRoutine(string showPopupName)
+        private async UniTask ShowPopupRoutine(string showPopupName)
         {
             var curPopup = PopupDic[showPopupName];
 
             curPopup.ShowWill();
 
-            if (_settings.isOnlyOnePopup && showingPopupList.Count >= 1)
-            {
-                var hidePopupName = showingPopupList.GetLast();
-                StartCoroutine(PopupDic[hidePopupName].HidePopup(true));
-            }
+            // if (_settings.isOnlyOnePopup && showingPopupList.Count >= 1)
+            // {
+            //     var hidePopupName = showingPopupList.GetLast();
+            //     StartCoroutine(PopupDic[hidePopupName].HidePopup(true));
+            // }
 
-            yield return curPopup.ShowPopup();
+            await curPopup.ShowPopup();
 
             while (curPopup.IsShown == false)
-                yield return null;
+                UniTask.Yield();
         }
 
         private IEnumerator HidePopupRoutine(string hidingPopupName)
@@ -222,7 +220,7 @@ namespace Monpl.UI
                 if (PopupDic[hidingPopupName].IsShown && _popupActions.Count == 0)
                 {
                     var prevPopupName = showingPopupList.GetLast();
-                    StartCoroutine(PopupDic[prevPopupName].ShowPopup(true));
+                    // PopupDic[prevPopupName].ShowPopup(true);
                 }
             }
 
@@ -234,20 +232,20 @@ namespace Monpl.UI
         private void AddPopupListInList(string popupName)
         {
             showingPopupList.Add(popupName);
-            _popupChangedAction?.Invoke(showingPopupList);
+            // _popupChangedAction?.Invoke(showingPopupList);
         }
 
         private void RemovePopupInList(string popupName)
         {
             showingPopupList.Remove(popupName);
-            _popupChangedAction?.Invoke(showingPopupList);
+            // _popupChangedAction?.Invoke(showingPopupList);
         }
 
         private string RemoveLastPopupInList()
         {
             var ret = showingPopupList.GetLastAndRemove();
-            _popupChangedAction?.Invoke(showingPopupList);
-            
+            // _popupChangedAction?.Invoke(showingPopupList);
+
             return ret;
         }
     }
