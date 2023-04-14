@@ -65,7 +65,10 @@ namespace Monpl.UI
             _popupTrs.Reset();
             _popupTrs.localPosition = _oriLocalPos;
 
-            await showTransition.Play(_popupTrs, _popupRoot);
+            if (showTransition != null)
+                await showTransition.Play(_popupTrs, _popupRoot);
+            else
+                _popupRoot.SetActiveCanvasGroup(true);
 
             if (isReOpen == false)
                 ShowDone();
@@ -108,7 +111,10 @@ namespace Monpl.UI
                 DimmingImage.SetEnable(false);
 
             if (!isTemporaryHide)
-                await hideTransition.Play(_popupTrs, _popupRoot);
+            {
+                if (hideTransition != null)
+                    await hideTransition.Play(_popupTrs, _popupRoot);
+            }
 
             _popupRoot.SetActiveCanvasGroup(false);
             IsShown = false;
