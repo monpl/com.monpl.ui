@@ -24,9 +24,11 @@ namespace Monpl.UI
         [SerializeField] private TransitionType transitionType;
         [SerializeField] private float alphaDuration = 0.1f;
 
-        public async UniTask Play(Transform trs)
+        public async UniTask Play(Transform trs, CanvasRootObject popupRoot)
         {
-            var screenSize = trs.parent.GetComponent<RectTransform>().sizeDelta;
+            var screenSize = trs.parent.parent.GetComponent<RectTransform>().sizeDelta;
+            
+            popupRoot.SetActiveCanvasGroup(isInAnimation, alphaDuration);
 
             switch (transitionType)
             {

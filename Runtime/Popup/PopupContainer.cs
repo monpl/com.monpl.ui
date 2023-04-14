@@ -1,24 +1,13 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using Monpl.Utils;
-using Monpl.Utils.Extensions;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.UI;
 
 namespace Monpl.UI
 {
-    public class PopupManagerSettings
-    {
-        public string[] popupNames;
-        public bool isOnlyOnePopup;
-        public float dimmingTime = 0.1f;
-        public bool isPortrait;
-        public Action<List<string>> onChangedPopupList;
-    }
-
     public class PopupActionData
     {
         public PopupAction actionType;
@@ -29,62 +18,76 @@ namespace Monpl.UI
     public enum PopupAction
     {
         Show,
-        Hide,
+        ShowOverlap,
         PopHide,
+        HideAll,
     }
 
     public class PopupContainer : MonoBehaviour
     {
+        [SerializeField] private float dimmingAlpha = 0.6f;
+
         private RectTransform _popupRoot;
-        private PopupManagerSettings _settings;
 
         public Dictionary<string, PopupBase> PopupDic { get; private set; }
-        public List<string> showingPopupList { get; private set; }
         public Queue<PopupActionData> waitingPopupQueue { get; private set; }
 
+        private Stack<string> _popupStack; // 기본 팝업 스택
+        private Stack<string> _overlapPopupStack; // 팝업 위에 뜨는 팝업 스택
+
         private Queue<PopupActionData> _popupActions;
-        // private Action<List<string>> _popupChangedAction;
+
+        private bool _isTransitioning;
+        private Action<List<string>> _popupChangedAction;
 
         public async UniTask PreInit()
         {
             PopupDic = new Dictionary<string, PopupBase>();
-            showingPopupList = new List<string>();
+            _popupStack = new Stack<string>();
+            _overlapPopupStack = new Stack<string>();
+
             waitingPopupQueue = new Queue<PopupActionData>();
             _popupActions = new Queue<PopupActionData>();
-            // _popupChangedAction = settings.onChangedPopupList;
+            _popupChangedAction = null;
             _popupRoot = GetComponent<RectTransform>();
 
             await LoadPopups();
             PopupRoutine().Forget();
         }
 
-        private async UniTask LoadPopups()
+        #region Public Methods
+
+        public void ShowPopup(string showingPopup, bool isOverlap = false, float delay = 0.0f)
         {
-            // if (_settings.popupNames == null)
-            //     return;
-            
-            _popupRoot.GetComponent<CanvasScaler>().matchWidthOrHeight = DeviceUtil.GetScaleMatch();
+            AddPopupAction(isOverlap ? PopupAction.ShowOverlap : PopupAction.Show, showingPopup, delay);
+        }
 
-            await Addressables.LoadAssetsAsync<GameObject>("popup", popup =>
-            {
-                if (popup == null)
-                    return;
+        public T ShowPopup<T>(bool isOverlap = false, float delay = 0.0f) where T : PopupBase
+        {
+            var popupName = typeof(T).Name;
 
-                Debug.Log($"POPUP LOAD!!: {popup.name}");
+            ShowPopup(popupName, isOverlap, delay);
+            return (T)PopupDic[popupName];
+        }
 
-                var newPopupObject = Instantiate(popup, _popupRoot, false);
-                var newPopup = newPopupObject.GetComponent<PopupBase>();
-                newPopup.gameObject.SetActive(true);
-                newPopup.PreInit(_popupRoot);
+        public void PopHidePopup(float delay = 0.0f)
+        {
+            AddPopupAction(PopupAction.PopHide, "", delay);
+        }
 
-                PopupDic.Add(popup.name, newPopup);
-            }).ToUniTask();
+        public void HideAllPopup(bool isIgnoreTransition = false)
+        {
+            AddPopupAction(PopupAction.HideAll, "", 0f, isIgnoreTransition);
         }
 
         public void AddWaitingPopupQueue(string waitPopupName, float delay = 0.0f)
         {
             waitingPopupQueue.Enqueue(new PopupActionData
-                {actionType = PopupAction.Show, delay = delay, popupName = waitPopupName});
+            {
+                actionType = PopupAction.Show,
+                popupName = waitPopupName,
+                delay = delay
+            });
         }
 
         public T AddWaitingPopupQueue<T>(float delay = 0f) where T : PopupBase
@@ -94,40 +97,38 @@ namespace Monpl.UI
             return (T)PopupDic[popupName];
         }
 
-        private void PopWaitingQueue()
+        public void AddPopupChangeAction(Action<List<string>> action)
         {
-            if (waitingPopupQueue.Count == 0)
+            _popupChangedAction += action;
+        }
+
+        public void RemoveAllChangeAction()
+        {
+            _popupChangedAction = null;
+        }
+
+        #endregion
+
+        #region Private Methods
+
+        private async UniTask LoadPopups()
+        {
+            _popupRoot.GetComponent<CanvasScaler>().matchWidthOrHeight = DeviceUtil.GetScaleMatch();
+
+            await Addressables.LoadAssetsAsync<GameObject>("popup", popup =>
+            {
+                if (popup == null)
+                    return;
+
+                PopupDic.Add(popup.name, CreateNewPopup(popup));
+            }).ToUniTask();
+        }
+
+        private void AddPopupAction(PopupAction actionType, string popupName, float delay = 0.0f, bool isIgnoreTransition = false)
+        {
+            if (_isTransitioning && !isIgnoreTransition)
                 return;
 
-            var waitingPopupData = waitingPopupQueue.Dequeue();
-            AddPopupAction(waitingPopupData.actionType, waitingPopupData.popupName, waitingPopupData.delay);
-        }
-
-        public void ShowPopup(string showingPopup, float delay = 0.0f)
-        {
-            AddPopupAction(PopupAction.Show, showingPopup, delay);
-        }
-
-        public T ShowPopup<T>(float delay = 0.0f) where T : PopupBase
-        {
-            var popupName = typeof(T).Name;
-
-            ShowPopup(popupName, delay);
-            return (T)PopupDic[popupName];
-        }
-
-        public void PopHidePopup(float delay = 0.0f)
-        {
-            AddPopupAction(PopupAction.PopHide, "", delay);
-        }
-
-        public void HidePopup(string hidingPopup, float delay = 0.0f)
-        {
-            AddPopupAction(PopupAction.Hide, hidingPopup, delay);
-        }
-
-        private void AddPopupAction(PopupAction actionType, string popupName, float delay = 0.0f)
-        {
             _popupActions.Enqueue(new PopupActionData
             {
                 actionType = actionType,
@@ -142,7 +143,7 @@ namespace Monpl.UI
             {
                 if (_popupActions.Count == 0)
                 {
-                    if (showingPopupList.Count == 0 && waitingPopupQueue.Count > 0)
+                    if (_popupStack.Count == 0 && _overlapPopupStack.Count == 0 && waitingPopupQueue.Count > 0)
                         PopWaitingQueue();
 
                     await UniTask.Yield();
@@ -151,102 +152,121 @@ namespace Monpl.UI
 
                 var action = _popupActions.Dequeue();
                 var popupName = action.popupName;
+                _isTransitioning = true;
 
                 await UniTask.Delay(TimeSpan.FromSeconds(action.delay));
 
                 switch (action.actionType)
                 {
                     case PopupAction.Show:
-                        // TODO: 대기 팝업인 경우엔 중복검사xx
-                        if (showingPopupList.Contains(popupName))
-                        {
-                            Debug.Log($"Popup is overlap.. popup: {popupName}");
-                            break;
-                        }
-
-                        await ShowPopupRoutine(popupName);
-                        AddPopupListInList(popupName);
+                        await ShowPopupRoutine(popupName, true);
+                        _popupStack.Push(popupName);
                         break;
-                    case PopupAction.Hide:
-                        if (showingPopupList.Contains(popupName) == false)
+                    case PopupAction.ShowOverlap:
+                        await ShowPopupRoutine(popupName);
+                        _overlapPopupStack.Push(popupName);
+                        break;
+                    case PopupAction.HideAll:
+                        var taskList = new List<UniTask>();
+                        while (_overlapPopupStack.Count > 0 || _popupStack.Count > 0)
                         {
-                            Debug.Log($"It Is not have in ShowingPopupList / name: {action.actionType}");
-                            break;
+                            var (hidePopupName2, isOverlap2) = GetStackedPopupOrEmpty();
+                            taskList.Add(HidePopupRoutine(hidePopupName2, isOverlap2));
                         }
 
-                        RemovePopupInList(popupName);
-                        await HidePopupRoutine(popupName);
+                        await UniTask.WhenAll(taskList);
                         break;
                     case PopupAction.PopHide:
-                        if (showingPopupList.Count == 0)
+                        var (hidePopupName, isOverlap) = GetStackedPopupOrEmpty();
+
+                        if (string.IsNullOrEmpty(hidePopupName))
                             break;
 
-                        var lastPopupName = RemoveLastPopupInList();
-                        await HidePopupRoutine(lastPopupName);
+                        await HidePopupRoutine(hidePopupName, isOverlap);
                         break;
                     default:
-                        break;
+                        throw new ArgumentOutOfRangeException();
                 }
 
                 await UniTask.Yield();
+                _isTransitioning = false;
             }
         }
 
-        private async UniTask ShowPopupRoutine(string showPopupName)
+        private (string, bool) GetStackedPopupOrEmpty()
+        {
+            if (_overlapPopupStack.Count > 0)
+                return (_overlapPopupStack.Pop(), true);
+
+            if (_popupStack.Count > 0)
+                return (_popupStack.Pop(), false);
+
+            return (string.Empty, false);
+        }
+
+        private void PopWaitingQueue()
+        {
+            if (waitingPopupQueue.Count == 0)
+                return;
+
+            var waitingPopupData = waitingPopupQueue.Dequeue();
+            AddPopupAction(waitingPopupData.actionType, waitingPopupData.popupName, waitingPopupData.delay);
+        }
+
+        private async UniTask ShowPopupRoutine(string showPopupName, bool isChangePopup = false)
         {
             var curPopup = PopupDic[showPopupName];
+            var hideTask = UniTask.CompletedTask;
 
             curPopup.ShowWill();
 
-            // if (_settings.isOnlyOnePopup && showingPopupList.Count >= 1)
-            // {
-            //     var hidePopupName = showingPopupList.GetLast();
-            //     StartCoroutine(PopupDic[hidePopupName].HidePopup(true));
-            // }
+            if (_popupStack.Count >= 1 && isChangePopup)
+            {
+                var hidePopupName = _popupStack.Peek();
+                hideTask = PopupDic[hidePopupName].HidePopup(true);
+            }
 
-            await curPopup.ShowPopup();
-
-            while (curPopup.IsShown == false)
-                UniTask.Yield();
+            await UniTask.WhenAll(curPopup.ShowPopup(), hideTask);
         }
 
-        private IEnumerator HidePopupRoutine(string hidingPopupName)
+        private async UniTask HidePopupRoutine(string hidingPopupName, bool isOverlap)
         {
             var hidingPopup = PopupDic[hidingPopupName];
 
-            // TODO: Show Only one Popup 처리
-            if (_settings.isOnlyOnePopup && showingPopupList.Count >= 1)
+            hidingPopup.HideWill();
+            var hideTask = hidingPopup.HidePopup();
+            var lastShowTask = UniTask.CompletedTask;
+
+            if (!isOverlap)
             {
-                if (PopupDic[hidingPopupName].IsShown && _popupActions.Count == 0)
-                {
-                    var prevPopupName = showingPopupList.GetLast();
-                    // PopupDic[prevPopupName].ShowPopup(true);
-                }
+                if (_popupStack.TryPeek(out var lastPopupName))
+                    lastShowTask = PopupDic[lastPopupName].ShowPopup(true);
             }
 
-            hidingPopup.HideWill();
-
-            yield return hidingPopup.HidePopup();
+            await UniTask.WhenAll(hideTask, lastShowTask);
         }
 
-        private void AddPopupListInList(string popupName)
+        private PopupBase CreateNewPopup(GameObject popupObject)
         {
-            showingPopupList.Add(popupName);
-            // _popupChangedAction?.Invoke(showingPopupList);
+            var newPopupObject = Instantiate(popupObject, _popupRoot, false);
+            var newPopup = newPopupObject.GetComponent<PopupBase>();
+            newPopup.PreInit();
+
+            if (newPopup.IsHaveDimming())
+                newPopup.DimmingImage = GetNewDimmingImage(newPopupObject.transform);
+
+            return newPopup;
         }
 
-        private void RemovePopupInList(string popupName)
+        private DimmingImage GetNewDimmingImage(Transform parentTrs)
         {
-            showingPopupList.Remove(popupName);
-            // _popupChangedAction?.Invoke(showingPopupList);
+            var newDimming = new GameObject("Dimming").AddComponent<DimmingImage>();
+            newDimming.transform.parent = parentTrs;
+            newDimming.PreInit(dimmingAlpha);
+
+            return newDimming;
         }
 
-        private string RemoveLastPopupInList()
-        {
-            var ret = showingPopupList.GetLastAndRemove();
-            // _popupChangedAction?.Invoke(showingPopupList);
-
-            return ret;
-        }
+        #endregion
     }
 }

@@ -1,4 +1,5 @@
 using System.Collections;
+using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using UnityEngine;
 
@@ -39,7 +40,7 @@ namespace Monpl.UI
                 canvasGroup.blocksRaycasts = enable;
         }
 
-        public IEnumerator SetActiveCanvasGroupCo(bool enable, float fadeTime = 0.0f)
+        public async UniTask SetActiveCanvasGroupTask(bool enable, float fadeTime = 0.0f)
         {
             if (canvasGroup == null)
                 PreInit();
@@ -52,11 +53,7 @@ namespace Monpl.UI
                 canvasGroup.blocksRaycasts = enable;
             }
 
-            if (fadeTime > 0f)
-                yield return canvasGroup.DOFade(enable ? 1f : 0f, fadeTime).WaitForCompletion();
-            else
-                canvasGroup.alpha = enable ? 1f : 0f;
-            yield break;
+            await canvasGroup.DOFade(enable ? 1f : 0f, fadeTime).ToUniTask();
         }
     }
 }

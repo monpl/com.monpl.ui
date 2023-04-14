@@ -14,9 +14,9 @@ namespace Monpl.UI
 
         protected Animator popupAnimator;
 
-        public override void PreInit(RectTransform popupCanvasTrs)
+        public override void PreInit()
         {
-            base.PreInit(popupCanvasTrs);
+            base.PreInit();
             popupAnimator = GetComponent<Animator>();
         }
 
