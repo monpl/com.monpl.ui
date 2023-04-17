@@ -21,7 +21,7 @@ namespace Monpl.UI
         {
             if (GetComponent<Button>().interactable == false)
                 return;
-            
+
             isPressed = true;
 
             PlayButtonAni(true);
@@ -49,7 +49,6 @@ namespace Monpl.UI
 
         protected virtual void PlayButtonAni(bool isDown)
         {
-
         }
     }
 }

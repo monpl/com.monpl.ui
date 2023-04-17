@@ -1,4 +1,3 @@
-using System.Collections;
 using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using UnityEngine;
@@ -11,9 +10,11 @@ namespace Monpl.UI
         protected CanvasGroup canvasGroup;
         [SerializeField] private bool _isNotChangeGroupSetting;
 
-        public virtual void PreInit()
+        public void PreInit(bool isActive = true)
         {
             canvasGroup = GetComponent<CanvasGroup>();
+
+            SetActiveCanvasGroup(isActive);
         }
 
         public void SetAlpha(float alpha)

@@ -17,7 +17,15 @@ namespace Monpl.UI
         [SerializeField] private float pressingScale = 0.9f;
         [SerializeField] private AnimationType animationType = AnimationType.NonTween;
 
-        public RectTransform AnimationObject { get { Init(); return _animationObject; } }
+        public RectTransform AnimationObject
+        {
+            get
+            {
+                Init();
+                return _animationObject;
+            }
+        }
+
         public float PressingScale
         {
             get => pressingScale;
@@ -38,8 +46,8 @@ namespace Monpl.UI
             base.PlayButtonAni(isDown);
 
             AnimationObject.DOComplete();
-            
-            if(!_button.interactable) 
+
+            if (!_button.interactable)
                 return;
 
             if (isDown)

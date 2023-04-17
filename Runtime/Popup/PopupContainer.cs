@@ -227,6 +227,8 @@ namespace Monpl.UI
             }
 
             await UniTask.WhenAll(curPopup.ShowPopup(), hideTask);
+
+            curPopup.ShowDone();
         }
 
         private async UniTask HidePopupRoutine(string hidingPopupName, bool isOverlap)
@@ -234,6 +236,7 @@ namespace Monpl.UI
             var hidingPopup = PopupDic[hidingPopupName];
 
             hidingPopup.HideWill();
+
             var hideTask = hidingPopup.HidePopup();
             var lastShowTask = UniTask.CompletedTask;
 
@@ -244,6 +247,8 @@ namespace Monpl.UI
             }
 
             await UniTask.WhenAll(hideTask, lastShowTask);
+
+            hidingPopup.HideDone();
         }
 
         private PopupBase CreateNewPopup(GameObject popupObject)

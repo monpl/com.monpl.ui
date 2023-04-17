@@ -1,4 +1,3 @@
-using System;
 using Cysharp.Threading.Tasks;
 using Monpl.Utils;
 using UnityEngine;
@@ -6,36 +5,60 @@ using UnityEngine.UI;
 
 namespace Monpl.UI
 {
+    [RequireComponent(typeof(TransitionObject))]
+    [RequireComponent(typeof(CanvasRootObject))]
     [RequireComponent(typeof(CanvasScaler))]
-    public class ScreenBase : CanvasRootObject
+    public class ScreenBase : MonoBehaviour
     {
-        public override void PreInit()
+        protected TransitionObject _transitionObject;
+        protected CanvasRootObject _canvasRootObject;
+
+        public void PreInit()
         {
-            base.PreInit();
+            _canvasRootObject = GetComponent<CanvasRootObject>();
+            _transitionObject = GetComponent<TransitionObject>();
+
             GetComponent<CanvasScaler>().matchWidthOrHeight = DeviceUtil.GetScaleMatch();
-            SetActiveCanvasGroup(false);
+
+            var screenAnimTrs = transform.GetChild(0);
+
+            _canvasRootObject.PreInit(false);
+            _transitionObject.PreInit(screenAnimTrs, screenAnimTrs.localPosition, GetScreenSize(), _canvasRootObject);
         }
 
-        public virtual void ShowWill() { }
-
-        public virtual void ShowDone() { }
-
-        public virtual void DismissWill() { }
-
-        public virtual void DismissDone() { }
-
-        public virtual async UniTask ShowRoutine(float fadingTime = 0.1f)
+        public virtual void ShowWill()
         {
-            SetActiveCanvasGroup(true, fadingTime);
-            await UniTask.Delay(TimeSpan.FromSeconds(fadingTime));
         }
 
-        public virtual async UniTask DismissRoutine(float fadingTime = 0.1f)
+        public virtual void ShowDone()
         {
-            SetActiveCanvasGroup(false, fadingTime);
-            await UniTask.Delay(TimeSpan.FromSeconds(fadingTime));
         }
 
-        public virtual void OnPressedBackKey() { }
+        public virtual void DismissWill()
+        {
+        }
+
+        public virtual void DismissDone()
+        {
+        }
+
+        public virtual async UniTask ShowRoutine()
+        {
+            await _transitionObject.ShowTransition();
+        }
+
+        public virtual async UniTask DismissRoutine()
+        {
+            await _transitionObject.HideTransition();
+        }
+
+        public virtual void OnPressedBackKey()
+        {
+        }
+
+        private Vector2 GetScreenSize()
+        {
+            return transform.GetComponent<RectTransform>().sizeDelta;
+        }
     }
 }

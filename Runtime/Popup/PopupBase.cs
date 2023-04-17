@@ -1,19 +1,16 @@
 using Cysharp.Threading.Tasks;
-using DG.Tweening;
-using Monpl.Utils.Extensions;
 using UnityEngine;
 
 namespace Monpl.UI
 {
+    [RequireComponent(typeof(TransitionObject))]
     public class PopupBase : MonoBehaviour
     {
-        [SerializeField] private PopupTransitionData showTransition;
-        [SerializeField] private PopupTransitionData hideTransition;
         [SerializeField] private bool isHaveDimming = true;
 
-        protected CanvasRootObject _popupRoot;
+        protected CanvasRootObject _popupRootObject;
+        protected TransitionObject _transitionObject;
         protected Transform _popupTrs;
-        protected Vector2 _oriLocalPos;
 
         public bool IsShown { get; protected set; }
         public DimmingImage DimmingImage { get; set; }
@@ -22,36 +19,16 @@ namespace Monpl.UI
 
         public virtual void PreInit()
         {
-            if (PreInitChildPopup() == false)
+            if (IsValidPopup() == false)
                 return;
 
             IsShown = false;
 
-            gameObject.SetActive(true);
-            _popupRoot.SetActiveCanvasGroup(false);
-        }
+            _transitionObject = GetComponent<TransitionObject>();
+            _popupRootObject = _popupTrs.GetComponent<CanvasRootObject>();
 
-        private bool PreInitChildPopup()
-        {
-            var popup = transform.Find("Popup");
-
-            if (popup == null)
-            {
-                Debug.LogError($"Popup is not exist! name: {name}");
-                return false;
-            }
-
-            _popupRoot = popup.GetComponent<CanvasRootObject>();
-            _oriLocalPos = popup.transform.localPosition;
-
-            if (_popupRoot == null)
-            {
-                Debug.LogError($"Popup is not have CanvasRootObject.. name: {name}");
-                return false;
-            }
-
-            _popupTrs = _popupRoot.transform;
-            return true;
+            _popupRootObject.PreInit(false);
+            _transitionObject.PreInit(_popupTrs, _popupTrs.localPosition, GetScreenSize(), _popupRootObject);
         }
 
         public virtual async UniTask ShowPopup(bool isReOpen = false)
@@ -61,36 +38,24 @@ namespace Monpl.UI
             if (isHaveDimming)
                 DimmingImage.SetEnable(true);
 
-            _popupTrs.DOKill();
-            _popupTrs.Reset();
-            _popupTrs.localPosition = _oriLocalPos;
+            await _transitionObject.ShowTransition();
 
-            if (showTransition != null)
-                await showTransition.Play(_popupTrs, _popupRoot);
-            else
-                _popupRoot.SetActiveCanvasGroup(true);
-
-            if (isReOpen == false)
-                ShowDone();
-            else
+            if (isReOpen)
             {
                 SetGoodsArea();
                 IsShown = true;
             }
         }
 
-        protected virtual UniTask ShowPopupCustom()
+        public virtual async UniTask HidePopup(bool isTemporaryHide = false)
         {
-            return UniTask.Yield().ToUniTask();
-        }
+            if (isHaveDimming)
+                DimmingImage.SetEnable(false);
 
-        protected virtual UniTask HidePopupCustom()
-        {
-            return UniTask.Yield().ToUniTask();
-        }
-
-        public virtual void SetGoodsArea()
-        {
+            if (!isTemporaryHide)
+                await _transitionObject.HideTransition();
+            else
+                await _popupRootObject.SetActiveCanvasGroupTask(false);
         }
 
         public virtual void ShowWill()
@@ -98,42 +63,51 @@ namespace Monpl.UI
             IsShown = false;
         }
 
-        protected virtual void ShowDone()
+        public virtual void ShowDone()
         {
             IsShown = true;
-        }
-
-        public virtual async UniTask HidePopup(bool isTemporaryHide = false)
-        {
-            _popupTrs.DOKill();
-
-            if (isHaveDimming)
-                DimmingImage.SetEnable(false);
-
-            if (!isTemporaryHide)
-            {
-                if (hideTransition != null)
-                    await hideTransition.Play(_popupTrs, _popupRoot);
-            }
-
-            _popupRoot.SetActiveCanvasGroup(false);
-            IsShown = false;
-
-            HideDone();
         }
 
         public virtual void HideWill()
         {
         }
 
-        private void HideDone()
+        public virtual void HideDone()
         {
             IsShown = false;
+        }
+
+        public virtual void SetGoodsArea()
+        {
         }
 
         public virtual void OnPressedBackKey()
         {
             UIManager.PopupContainer.PopHidePopup();
+        }
+
+        private bool IsValidPopup()
+        {
+            _popupTrs = transform.Find("Popup");
+
+            if (_popupTrs == null)
+            {
+                Debug.LogError($"Popup is not exist! name: {name}");
+                return false;
+            }
+
+            if (!_popupTrs.TryGetComponent(out _popupRootObject))
+            {
+                Debug.LogError($"Popup is not have CanvasRootObject.. name: {name}");
+                return false;
+            }
+
+            return true;
+        }
+
+        private Vector2 GetScreenSize()
+        {
+            return transform.parent.GetComponent<RectTransform>().sizeDelta;
         }
     }
 }

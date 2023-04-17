@@ -9,7 +9,7 @@ namespace Monpl.UI
     {
         [SerializeField] private bool haveInAnimation = true;
 
-        protected string animationIn = "In"; 
+        protected string animationIn = "In";
         protected string animationReset = "Reset";
 
         protected Animator popupAnimator;
@@ -31,7 +31,7 @@ namespace Monpl.UI
             }
         }
 
-        protected override void ShowDone()
+        public override void ShowDone()
         {
             base.ShowDone();
 

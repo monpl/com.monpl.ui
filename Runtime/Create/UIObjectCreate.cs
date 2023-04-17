@@ -62,16 +62,6 @@ namespace Monpl.UI
             popupBaseObj.AddComponent<PopupBase>();
 
             // -----------------
-            // Dimming
-            // Trs
-            var dimmingRectTrs = EditorUtil.CreateRectTransformNewObject("Dimming", popupBaseRectTrs);
-            dimmingRectTrs.SetStretchAll();
-
-            var dimmingImg = dimmingRectTrs.gameObject.AddComponent<Image>();
-            dimmingImg.color = new Color(0, 0, 0, 0.5f);
-            dimmingImg.enabled = false;
-
-            // -----------------
             // Popup Child
             var popupRectTrs = EditorUtil.CreateRectTransformNewObject("Popup", popupBaseRectTrs);
             popupRectTrs.ResetLocalPosition();
@@ -95,8 +85,6 @@ namespace Monpl.UI
         [MenuItem("GameObject/MPGameLib/Screen/ScreenBase", false, 2)]
         static void CreateScreenBase()
         {
-            // AddSortingLayer("UI");
-
             var screenRectTrs = EditorUtil.CreateRectTransformNewObject("NewScreen", Selection.activeTransform);
             var screenObj = screenRectTrs.gameObject;
 

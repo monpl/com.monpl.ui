@@ -16,9 +16,9 @@ namespace Monpl.UI
             get => pressingDown;
             set
             {
-                if (pressingDown == value) 
+                if (pressingDown == value)
                     return;
-                
+
                 pressingDown = value;
                 AcceptImages(false);
             }
@@ -29,9 +29,9 @@ namespace Monpl.UI
             get => buttonSprite;
             set
             {
-                if (buttonSprite == value) 
+                if (buttonSprite == value)
                     return;
-                    
+
                 buttonSprite = value;
                 AcceptImages(false);
             }
@@ -42,18 +42,49 @@ namespace Monpl.UI
             get => shadowColor;
             set
             {
-                if (shadowColor == value) 
+                if (shadowColor == value)
                     return;
-                
+
                 shadowColor = value;
                 AcceptImages(false);
             }
         }
 
-        public RectTransform MainTrs { get { Init(); return _mainTrs; } }
-        public RectTransform ShadowTrs { get { Init(); return _shadowTrs; } }
-        public Image MainImage { get { Init(); return _mainImage; } }
-        public Image ShadowImage { get { Init(); return _shadowImage; } }
+        public RectTransform MainTrs
+        {
+            get
+            {
+                Init();
+                return _mainTrs;
+            }
+        }
+
+        public RectTransform ShadowTrs
+        {
+            get
+            {
+                Init();
+                return _shadowTrs;
+            }
+        }
+
+        public Image MainImage
+        {
+            get
+            {
+                Init();
+                return _mainImage;
+            }
+        }
+
+        public Image ShadowImage
+        {
+            get
+            {
+                Init();
+                return _shadowImage;
+            }
+        }
 
         private RectTransform _mainTrs;
         private RectTransform _shadowTrs;
@@ -68,7 +99,7 @@ namespace Monpl.UI
             _mainImage = _mainImage ? _mainImage : _mainTrs.GetComponent<Image>();
             _shadowImage = _shadowImage ? _shadowImage : _shadowTrs.GetComponent<Image>();
             _shadowImage.color = ShadowColor;
-            
+
             _mainTrs.SetAsLastSibling();
         }
 
@@ -79,7 +110,7 @@ namespace Monpl.UI
                 Debug.Log("Please Insert Sprite..!");
                 return;
             }
-            
+
             var rectTrs = GetComponent<RectTransform>();
             var border = buttonSprite.border;
             var isSliced = border.x > 0 || border.y > 0 || border.z > 0 || border.w > 0;
@@ -95,7 +126,7 @@ namespace Monpl.UI
                 ShadowTrs.sizeDelta = MainTrs.sizeDelta;
 
                 MainImage.rectTransform.sizeDelta = rectTrs.sizeDelta;
-                ShadowImage.rectTransform.sizeDelta = rectTrs.sizeDelta;                
+                ShadowImage.rectTransform.sizeDelta = rectTrs.sizeDelta;
 
                 SetAllDirty();
             }
