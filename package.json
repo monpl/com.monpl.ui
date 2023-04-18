@@ -5,9 +5,7 @@
   "unity": "2019.3",
   "description": "Managing UI Objects",
   "dependencies": {
-    "com.monpl.utils": "1.0.0",
-    "com.monpl.patterns": "1.0.0",
-    "com.monpl.dotween": "1.0.0"
+    "com.monpl.utils": "1.1.0"
   },
   "keywords": [
     "unity",
