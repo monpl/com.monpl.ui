@@ -1,4 +1,4 @@
-using System.Collections;
+using System.Linq;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 
@@ -14,10 +14,14 @@ namespace Monpl.UI
 
         protected Animator popupAnimator;
 
+        public bool IsInAnimationDone { get; private set; }
+
         public override void PreInit()
         {
             base.PreInit();
             popupAnimator = GetComponent<Animator>();
+
+            AddInAnimationDoneEvent();
         }
 
         public override void ShowWill()
@@ -36,21 +40,32 @@ namespace Monpl.UI
             base.ShowDone();
 
             if (haveInAnimation)
-            {
-                IsShown = false;
                 popupAnimator.Play(animationIn, -1, 0.0f);
-            }
         }
 
         protected virtual void OnInAnimationDone()
         {
-            IsShown = true;
+            IsInAnimationDone = true;
         }
 
         public override async UniTask HidePopup(bool isTemporaryHide = false)
         {
             popupAnimator.enabled = false;
             await base.HidePopup(isTemporaryHide);
+        }
+
+        private void AddInAnimationDoneEvent()
+        {
+            var inAnimation = popupAnimator.runtimeAnimatorController.animationClips.FirstOrDefault(clip => clip.name == animationIn);
+
+            if (inAnimation != null)
+            {
+                inAnimation.AddEvent(new AnimationEvent
+                {
+                    time = inAnimation.length,
+                    functionName = nameof(OnInAnimationDone)
+                });
+            }
         }
     }
 }
